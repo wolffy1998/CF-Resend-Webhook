@@ -222,13 +222,6 @@ function buildEmailHtml(title, desp) {
       text-align: left;
     }
     .body th { background: #f5f5f5; font-weight: 600; }
-    .footer {
-      padding: 16px 28px;
-      text-align: center;
-      font-size: 12px;
-      color: #aaa;
-    }
-    .footer a { color: #aaa; }
   </style>
 </head>
 <body>
@@ -238,9 +231,6 @@ function buildEmailHtml(title, desp) {
     </div>
     <div class="body">
       ${body}
-    </div>
-    <div class="footer">
-      Powered by <a href="https://resend.com">Resend</a> &amp; <a href="https://workers.cloudflare.com">Cloudflare Workers</a>
     </div>
   </div>
 </body>
