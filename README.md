@@ -45,28 +45,27 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
    | 变量名 | 类型 | 配置位置 | 说明 |
    |---|---|---|---|
    | `RESEND_API_KEY` | Secret | Dashboard → Settings → Secrets | Resend API 密钥 |
-   | `FROM_EMAIL` | Plain | `wrangler.toml` → `[vars]` | 发件人地址（已预置占位值，需改成真实地址） |
-   | `TO_EMAIL` | Plain | `wrangler.toml` → `[vars]` | 默认收件人地址（同上） |
-   | `REPLY_TO` | Plain | 可选，`wrangler.toml` → `[vars]` | 回复地址 |
+   | `FROM_EMAIL` | Plain | Dashboard → Settings → Variables | 发件人地址（测试期用 `onboarding@resend.dev`，正式用已验证域名） |
+   | `TO_EMAIL` | Plain | Dashboard → Settings → Variables | 默认收件人地址（测试期填 Resend 注册邮箱） |
+   | `REPLY_TO` | Plain | 可选，Dashboard → Settings → Variables | 回复地址 |
 
 8. 保存后自动重新部署，即可使用
 
 > ⚠️ **变量配置说明（重要）**
 >
-> Cloudflare 以 `wrangler.toml` 为部署配置的唯一来源。每次通过 GitHub 集成部署时，`wrangler.toml` 中 `[vars]` 定义的变量会**覆盖** Dashboard 中手动添加的同名明文变量；**不在 `wrangler.toml` 中的明文变量会被重置为空**（表现为"变量被删除"）。
+> 本项目所有环境变量**统一在 Cloudflare Dashboard 中配置**（不写在 `wrangler.toml` 里）：
+> - 明文变量（`FROM_EMAIL` / `TO_EMAIL` / `REPLY_TO`）→ **Settings → Variables**
+> - 敏感密钥（`RESEND_API_KEY`）→ **Settings → Secrets**（加密存储，不会出现在代码/日志中）
 >
-> 因此：
-> - `FROM_EMAIL` / `TO_EMAIL` / `REPLY_TO` 等**非敏感**配置，直接修改 `wrangler.toml` 的 `[vars]` 段（提交后部署即生效，永不丢失）
-> - `RESEND_API_KEY` 等**敏感**密钥，使用 **Secret** 设置（Dashboard → Settings → Secrets，或 `wrangler secret put`）——Secret 不会被部署删除
-> - 如果不想把邮箱写进仓库，可在 `wrangler.toml` 顶层加 `keep_vars = true`（详见文件内注释）
+> `wrangler.toml` 已设置 `keep_vars = true`，保证每次部署时**保留** Dashboard 中已配置的变量，不会覆盖或清空（这是"部署后变量被删"问题的标准解法）。
+>
+> ⚠️ 仓库中不包含任何变量值。新环境部署后，**必须先到 Dashboard 配置好变量**，接口才能正常工作。
 
 #### 方式 B：Wrangler CLI 本地部署
 
 ```bash
 # 安装依赖
 npm install
-
-# 编辑 wrangler.toml，把 [vars] 中的 FROM_EMAIL / TO_EMAIL 占位值改成真实地址
 
 # 创建本地测试配置
 cp .dev.vars.example .dev.vars
@@ -78,11 +77,13 @@ npm run dev
 # 登录 Cloudflare
 npx wrangler login
 
-# 部署（会自动带上 wrangler.toml [vars] 中的变量）
+# 部署（keep_vars = true，保留 Dashboard 中已配置的变量）
 npm run deploy
 
 # 设置生产环境密钥（交互式输入，Secret 不会被部署删除）
 npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put FROM_EMAIL
+npx wrangler secret put TO_EMAIL
 ```
 
 ## API 文档
@@ -254,7 +255,7 @@ CF-Resend-Webhook/
 ├── .gitignore
 ├── LICENSE               # MIT 许可证
 ├── package.json
-├── wrangler.toml         # Cloudflare Workers 配置（含 [vars] 变量）
+├── wrangler.toml         # Cloudflare Workers 配置（keep_vars = true，变量在 Dashboard 配置）
 └── README.md
 ```
 

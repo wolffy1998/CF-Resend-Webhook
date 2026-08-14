@@ -3,31 +3,17 @@ main = "src/index.js"
 compatibility_date = "2024-09-23"
 
 # ─── 变量配置（重要！）────────────────────────────────────────
-# Cloudflare 以 wrangler.toml 为部署配置的唯一来源（source of truth）：
-# 每次通过 GitHub 集成 / wrangler deploy 部署时，本文件中的 [vars] 会
-# 覆盖 Dashboard 里手动添加的同名"明文变量"；不在本文件中的明文变量
-# 会被重置为空（表现为"变量被删除"）。
+# 本项目所有环境变量统一在 Cloudflare Dashboard 中配置：
+#   - 明文变量（FROM_EMAIL / TO_EMAIL / REPLY_TO）→ Settings → Variables
+#   - 敏感密钥（RESEND_API_KEY）→ Settings → Secrets
 #
-# 因此正确的做法是：
-#   1. 非敏感配置（发件人/收件人等）写在下面 [vars] 中 —— 每次部署自动带上，不会被清空
-#   2. 敏感密钥（RESEND_API_KEY）使用 Secret 设置（wrangler secret put
-#      RESEND_API_KEY，或 Dashboard → Settings → Secrets）—— Secret 不会被部署删除
+# keep_vars = true 是关键：每次部署时保留 Dashboard 中已配置的变量，
+# 不会被 wrangler.toml 覆盖或清空（避免"部署后变量被删"的问题）。
 #
-# ⚠️ 下面两个占位值请务必替换成你自己的真实地址！
-#    这是公开仓库的话，注意邮箱会随代码公开，介意可改用 keep_vars = true 方案。
+# ⚠️ 注意：仓库中不再包含任何变量值。新环境部署后，
+#    必须先到 Dashboard 配置好变量，接口才能正常工作。
 
-[vars]
-FROM_EMAIL = "your-verified-sender@example.com"   # 发件人地址（须在 Resend 中验证过）
-TO_EMAIL   = "you@example.com"                    # 默认收件人地址
-# REPLY_TO = "reply@example.com"                  # 可选：回复地址
-
-# ─── 备选方案：保留 Dashboard 中手动配置的变量 ────────────────
-# 如果你不希望把邮箱写进仓库，可改用本方案：
-#   1. 将上面的 [vars] 段删除
-#   2. 取消注释下面这行：keep_vars = true
-#   3. 变量仍通过 Dashboard → Settings → Variables 手动配置
-#      （注意：Dashboard 明文变量在"保留"模式下与仓库配置可能不同步）
-# keep_vars = true
+keep_vars = true
 
 # ─── 可选：自定义路由 ────────────────────────────────────────
 # 默认部署后访问地址为 https://resend-email-webhook.<你的子域>.workers.dev
