@@ -1,0 +1,21 @@
+name = "resend-email-webhook"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# ─── 环境变量说明 ────────────────────────────────────────────
+# 以下变量请勿直接写在此文件中（密钥不应入库）。
+# 请在 Cloudflare Dashboard → Workers → 你的 Worker → Settings → Variables 中配置：
+#
+#   RESEND_API_KEY  (Secret)  — Resend API 密钥
+#   FROM_EMAIL      (Plain)   — 发件人地址，如 "noreply@yourdomain.com"
+#   TO_EMAIL        (Plain)   — 默认收件人地址，如 "you@example.com"
+#   REPLY_TO        (Plain)   — 可选，回复地址
+#
+# 如果使用 wrangler CLI 本地部署，可创建 .dev.vars 文件存放本地测试变量。
+
+# ─── 可选：自定义路由 ────────────────────────────────────────
+# 默认部署后访问地址为 https://resend-email-webhook.<你的子域>.workers.dev
+# 如需自定义路由，取消注释并配置：
+# routes = [
+#   { pattern = "notify.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]

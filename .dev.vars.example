@@ -1,0 +1,7 @@
+# 复制此文件为 .dev.vars 并填入真实值，用于本地 `wrangler dev` 测试
+# ⚠️ .dev.vars 已被 .gitignore 忽略，不会上传到 GitHub
+
+RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
+FROM_EMAIL="noreply@yourdomain.com"
+TO_EMAIL="you@example.com"
+REPLY_TO=""

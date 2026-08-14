@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Wrangler
+.dev.vars
+.wrangler/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
