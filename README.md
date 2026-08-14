@@ -24,8 +24,6 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
 
 ### 2. 部署到 Cloudflare Workers
 
-#### 方式 A：GitHub 直连部署（推荐）
-
 1. Fork 或将本仓库推送到你的 GitHub
 2. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
 3. 进入 **Workers & Pages** → **Create** → **Import a repository**
@@ -40,7 +38,7 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
    | Deploy command | `npx wrangler deploy` |
 
 6. 点击 **Save and Deploy**
-7. 配置环境变量（**重要，请先阅读下文"变量配置说明"**）：
+7. Cloudflare Dashboard 中配置环境变量（**重要，请先阅读下文"变量配置说明"**）：
 
    | 变量名 | 类型 | 配置位置 | 说明 |
    |---|---|---|---|
@@ -51,41 +49,6 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
    | `REPLY_TO` | Plain | 可选，Dashboard → Settings → Variables | 回复地址 |
 
 8. 保存后自动重新部署，即可使用
-
-> ⚠️ **变量配置说明（重要）**
->
-> 本项目所有环境变量**统一在 Cloudflare Dashboard 中配置**（不写在 `wrangler.toml` 里）：
-> - 明文变量（`FROM_EMAIL` / `TO_EMAIL` / `REPLY_TO`）→ **Settings → Variables**
-> - 敏感密钥（`RESEND_API_KEY`）→ **Settings → Secrets**（加密存储，不会出现在代码/日志中）
->
-> `wrangler.toml` 已设置 `keep_vars = true`，保证每次部署时**保留** Dashboard 中已配置的变量，不会覆盖或清空（这是"部署后变量被删"问题的标准解法）。
->
-> ⚠️ 仓库中不包含任何变量值。新环境部署后，**必须先到 Dashboard 配置好变量**，接口才能正常工作。
-
-#### 方式 B：Wrangler CLI 本地部署
-
-```bash
-# 安装依赖
-npm install
-
-# 创建本地测试配置
-cp .dev.vars.example .dev.vars
-# 编辑 .dev.vars 填入真实值（含 RESEND_API_KEY）
-
-# 本地测试
-npm run dev
-
-# 登录 Cloudflare
-npx wrangler login
-
-# 部署（keep_vars = true，保留 Dashboard 中已配置的变量）
-npm run deploy
-
-# 设置生产环境密钥（交互式输入，Secret 不会被部署删除）
-npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put FROM_EMAIL
-npx wrangler secret put TO_EMAIL
-```
 
 ## API 文档
 
@@ -306,17 +269,7 @@ CF-Resend-Webhook/
 
 MIT License
 
-Copyright (c) 2026 梁聪
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
