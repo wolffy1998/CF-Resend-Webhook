@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Cloudflare Workers + Resend 邮件通知 Webhook，Server酱风格 API",
   "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",

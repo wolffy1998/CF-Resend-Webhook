@@ -8,7 +8,10 @@
  *   TO_EMAIL        - 默认收件人地址（必填）
  *   REPLY_TO        - 回复地址（可选）
  *
- * 请求参数（POST body，支持 JSON / form-urlencoded）：
+ * 请求方式：GET / POST
+ *   GET  - 参数放在 URL 查询字符串（?title=xxx&desp=yyy），与 Server酱浏览器测试方式一致
+ *   POST - 参数放在 body，支持 JSON / form-urlencoded / text/plain
+ * 请求参数：
  *   title  - 邮件标题（必填）
  *   desp   - 邮件内容，支持纯文本 / Markdown（可选）
  *   to     - 收件人地址（可选，不传则使用 TO_EMAIL 环境变量）
@@ -21,7 +24,7 @@
 // CORS 预检允许的来源，* 表示允许所有
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
@@ -292,6 +295,16 @@ async function parseParams(request) {
   return { error: "Unsupported content type. Use JSON or form data." };
 }
 
+// ─── 解析 GET 查询参数 ──────────────────────────────────────
+function parseQueryParams(request) {
+  const url = new URL(request.url);
+  return {
+    title: url.searchParams.get("title"),
+    desp: url.searchParams.get("desp") || "",
+    to: url.searchParams.get("to") || "",
+  };
+}
+
 // ─── Worker 主入口 ─────────────────────────────────────────
 export default {
   async fetch(request, env) {
@@ -300,18 +313,21 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    // 仅允许 POST
-    if (request.method !== "POST") {
+    // 仅允许 GET 和 POST（GET 与 Server酱浏览器测试方式一致）
+    if (request.method !== "GET" && request.method !== "POST") {
       return jsonResponse(
         405,
-        "Method not allowed. This endpoint only accepts POST requests.",
+        "Method not allowed. This endpoint only accepts GET and POST requests.",
         {},
         405
       );
     }
 
-    // 解析参数
-    const params = await parseParams(request);
+    // 解析参数（GET 用 URL 查询参数，POST 用 body）
+    const params =
+      request.method === "GET"
+        ? parseQueryParams(request)
+        : await parseParams(request);
     if (params.error) {
       return jsonResponse(400, params.error, {}, 400);
     }

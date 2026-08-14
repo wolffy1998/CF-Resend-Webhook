@@ -6,10 +6,10 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
 
 ## 特性
 
-- **零配置调用**：客户端无需 API Key，直接 POST 即可发邮件
+- **零配置调用**：客户端无需 API Key，直接 GET / POST 即可发邮件
 - **Server酱风格**：熟悉的 `title` / `desp` 参数，`code` / `message` / `data` 响应
 - **Markdown 支持**：邮件正文支持 Markdown 语法，自动转为精美 HTML 模板
-- **多格式兼容**：支持 `application/json`、`application/x-www-form-urlencoded`、`text/plain`
+- **多格式兼容**：GET 查询参数 / `application/json` / `application/x-www-form-urlencoded` / `text/plain`
 - **CORS 友好**：支持浏览器跨域调用
 - **免费部署**：CF Workers 免费额度 10 万次/天 + Resend 免费额度 3000 封/月
 
@@ -40,16 +40,25 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
    | Deploy command | `npx wrangler deploy` |
 
 6. 点击 **Save and Deploy**
-7. 部署完成后，进入 Worker → **Settings** → **Variables**，添加环境变量：
+7. 配置环境变量（**重要，请先阅读下文"变量配置说明"**）：
 
-   | 变量名 | 类型 | 说明 |
-   |---|---|---|
-   | `RESEND_API_KEY` | Secret | Resend API 密钥 |
-   | `FROM_EMAIL` | Plain | 发件人地址，如 `noreply@yourdomain.com` |
-   | `TO_EMAIL` | Plain | 默认收件人地址，如 `you@example.com` |
-   | `REPLY_TO` | Plain | （可选）回复地址 |
+   | 变量名 | 类型 | 配置位置 | 说明 |
+   |---|---|---|---|
+   | `RESEND_API_KEY` | Secret | Dashboard → Settings → Secrets | Resend API 密钥 |
+   | `FROM_EMAIL` | Plain | `wrangler.toml` → `[vars]` | 发件人地址（已预置占位值，需改成真实地址） |
+   | `TO_EMAIL` | Plain | `wrangler.toml` → `[vars]` | 默认收件人地址（同上） |
+   | `REPLY_TO` | Plain | 可选，`wrangler.toml` → `[vars]` | 回复地址 |
 
 8. 保存后自动重新部署，即可使用
+
+> ⚠️ **变量配置说明（重要）**
+>
+> Cloudflare 以 `wrangler.toml` 为部署配置的唯一来源。每次通过 GitHub 集成部署时，`wrangler.toml` 中 `[vars]` 定义的变量会**覆盖** Dashboard 中手动添加的同名明文变量；**不在 `wrangler.toml` 中的明文变量会被重置为空**（表现为"变量被删除"）。
+>
+> 因此：
+> - `FROM_EMAIL` / `TO_EMAIL` / `REPLY_TO` 等**非敏感**配置，直接修改 `wrangler.toml` 的 `[vars]` 段（提交后部署即生效，永不丢失）
+> - `RESEND_API_KEY` 等**敏感**密钥，使用 **Secret** 设置（Dashboard → Settings → Secrets，或 `wrangler secret put`）——Secret 不会被部署删除
+> - 如果不想把邮箱写进仓库，可在 `wrangler.toml` 顶层加 `keep_vars = true`（详见文件内注释）
 
 #### 方式 B：Wrangler CLI 本地部署
 
@@ -57,9 +66,11 @@ API 设计参考 [Server酱（ServerChan）](https://sct.ftqq.com/) 的请求/�
 # 安装依赖
 npm install
 
+# 编辑 wrangler.toml，把 [vars] 中的 FROM_EMAIL / TO_EMAIL 占位值改成真实地址
+
 # 创建本地测试配置
 cp .dev.vars.example .dev.vars
-# 编辑 .dev.vars 填入真实值
+# 编辑 .dev.vars 填入真实值（含 RESEND_API_KEY）
 
 # 本地测试
 npm run dev
@@ -67,13 +78,11 @@ npm run dev
 # 登录 Cloudflare
 npx wrangler login
 
-# 部署
+# 部署（会自动带上 wrangler.toml [vars] 中的变量）
 npm run deploy
 
-# 设置生产环境密钥（交互式输入）
+# 设置生产环境密钥（交互式输入，Secret 不会被部署删除）
 npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put FROM_EMAIL
-npx wrangler secret put TO_EMAIL
 ```
 
 ## API 文档
@@ -81,8 +90,12 @@ npx wrangler secret put TO_EMAIL
 ### 请求
 
 ```
+GET  https://resend-email-webhook.<你的子域>.workers.dev/?title=xxx&desp=yyy
 POST https://resend-email-webhook.<你的子域>.workers.dev
 ```
+
+- **GET**：参数放在 URL 查询字符串（`title` / `desp` / `to`），与 Server酱的浏览器直接测试方式一致，适合简单场景
+- **POST**：参数放在请求体（推荐），适合长内容，无 URL 长度限制
 
 #### 请求参数
 
@@ -92,7 +105,7 @@ POST https://resend-email-webhook.<你的子域>.workers.dev
 | `desp` | string | 否 | 邮件正文，支持 Markdown |
 | `to` | string | 否 | 收件人地址（多个用逗号分隔），不传则使用默认收件人 |
 
-#### Content-Type 支持
+#### Content-Type 支持（POST）
 
 - `application/json`
 - `application/x-www-form-urlencoded`
@@ -135,7 +148,7 @@ POST https://resend-email-webhook.<你的子域>.workers.dev
 |---|---|---|
 | 0 | 200 | 发送成功 |
 | 400 | 400 | 请求参数错误（缺少 title、收件人为空等） |
-| 405 | 405 | 请求方法不允许（仅支持 POST） |
+| 405 | 405 | 请求方法不允许（仅支持 GET 和 POST） |
 | 500 | 500 | 服务端错误（密钥未配置、Resend API 异常等） |
 
 ## 使用示例
@@ -143,6 +156,9 @@ POST https://resend-email-webhook.<你的子域>.workers.dev
 ### cURL
 
 ```bash
+# GET 方式（浏览器或 curl 直接测试）
+curl "https://your-worker.workers.dev/?title=测试&desp=Hello%20World"
+
 # JSON 格式
 curl -X POST https://your-worker.workers.dev \
   -H "Content-Type: application/json" \
@@ -231,13 +247,14 @@ curl -s -X POST https://your-worker.workers.dev \
 ## 项目结构
 
 ```
-cf-resend-webhook/
+CF-Resend-Webhook/
 ├── src/
 │   └── index.js          # Worker 主代码
 ├── .dev.vars.example     # 本地测试环境变量模板
 ├── .gitignore
+├── LICENSE               # MIT 许可证
 ├── package.json
-├── wrangler.toml         # Cloudflare Workers 配置
+├── wrangler.toml         # Cloudflare Workers 配置（含 [vars] 变量）
 └── README.md
 ```
 
@@ -256,4 +273,24 @@ cf-resend-webhook/
 
 ## License
 
-MIT
+MIT License
+
+Copyright (c) 2026 梁聪
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
