@@ -2,6 +2,7 @@
 # ⚠️ .dev.vars 已被 .gitignore 忽略，不会上传到 GitHub
 
 RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
-FROM_EMAIL="noreply@yourdomain.com"
-TO_EMAIL="you@example.com"
+FROM_EMAIL="onboarding@resend.dev"
+TO_EMAIL="your-resend-registered@email.com"
 REPLY_TO=""
+WEBHOOK_TOKEN="your-token-here"

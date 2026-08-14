@@ -7,10 +7,18 @@
  *   FROM_EMAIL      - 发件人地址（必填，需在 Resend 中验证域名）
  *   TO_EMAIL        - 默认收件人地址（必填）
  *   REPLY_TO        - 回复地址（可选）
+ *   WEBHOOK_TOKEN   - 访问令牌（必填，设为 Secret，支持逗号分隔多个）
  *
  * 请求方式：GET / POST
  *   GET  - 参数放在 URL 查询字符串（?title=xxx&desp=yyy），与 Server酱浏览器测试方式一致
  *   POST - 参数放在 body，支持 JSON / form-urlencoded / text/plain
+ *
+ * Token 传递方式（与 Server酱风格一致，三种任选其一）：
+ *   1. 请求头：Authorization: Bearer <TOKEN>
+ *   2. URL 路径：https://xxx.workers.dev/<TOKEN>.send?title=xxx&desp=yyy
+ *   3. URL 查询参数：https://xxx.workers.dev/?token=<TOKEN>&title=xxx&desp=yyy
+ * 未携带或 Token 错误时返回 401。
+ *
  * 请求参数：
  *   title  - 邮件标题（必填）
  *   desp   - 邮件内容，支持纯文本 / Markdown（可选）
@@ -295,6 +303,41 @@ function parseQueryParams(request) {
   };
 }
 
+// ─── Token 鉴权（Server酱风格）──────────────────────────────
+// 客户端可通过以下任一方式携带 Token：
+//   1. 请求头：Authorization: Bearer <TOKEN>
+//   2. URL 路径（与 Server酱一致）：https://xxx.workers.dev/<TOKEN>.send?title=...
+//   3. URL 查询参数：https://xxx.workers.dev/?token=<TOKEN>&title=...
+function extractToken(request) {
+  // 1. Authorization 请求头
+  const auth = request.headers.get("Authorization") || "";
+  if (auth.startsWith("Bearer ")) return auth.slice(7).trim();
+
+  const url = new URL(request.url);
+
+  // 2. URL 路径 /<TOKEN>.send 或 /<TOKEN>
+  const segments = url.pathname.split("/").filter(Boolean);
+  if (segments.length === 1) {
+    const seg = segments[0];
+    const pathToken = seg.endsWith(".send") ? seg.slice(0, -5) : seg;
+    if (pathToken) return pathToken;
+  }
+
+  // 3. URL 查询参数 ?token=xxx
+  return url.searchParams.get("token") || "";
+}
+
+function isAuthorized(request, env) {
+  // WEBHOOK_TOKEN 支持逗号分隔多个 Token，任一匹配即通过
+  const configured = (env.WEBHOOK_TOKEN || "")
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (configured.length === 0) return false; // 未配置 → 拒绝（安全默认）
+  const provided = extractToken(request);
+  return configured.includes(provided);
+}
+
 // ─── Worker 主入口 ─────────────────────────────────────────
 export default {
   async fetch(request, env) {
@@ -311,6 +354,14 @@ export default {
         {},
         405
       );
+    }
+
+    // Token 鉴权（Server酱风格）
+    if (!isAuthorized(request, env)) {
+      const message = (env.WEBHOOK_TOKEN || "").trim()
+        ? "Unauthorized: invalid or missing token"
+        : "Server misconfiguration: WEBHOOK_TOKEN is not set. Add it in Dashboard → Settings → Secrets.";
+      return jsonResponse(401, message, {}, 401);
     }
 
     // 解析参数（GET 用 URL 查询参数，POST 用 body）
